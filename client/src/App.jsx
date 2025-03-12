@@ -6,18 +6,31 @@ import UserContext from "./context/UserContext";
 import { useNavigate } from "react-router";
 const App = () => {
   const navigate = useNavigate();
-  const { user, setUser, chats, setChats } = useContext(UserContext);
-  console.log("🚀 ~ App ~ user:", user);
+  const { user, getUserData, chats, getChatData, updateProfile } =
+    useContext(UserContext);
+
   useEffect(() => {
-    console.log("useris", user);
-
+    console.log("user is", user);
     if (!user || Object.keys(user).length === 0) navigate("/signin");
-  }, [user]);
+  }, [user?.id]);
 
-  const handleLogout = () => {
-    setUser({});
-    setChats([]);
+  const handleLogout = async () => {
+    await getUserData();
+    await getChatData();
   };
+
+  setInterval(async () => {
+    if (user.id) {
+      console.log("Updating...");
+      await updateProfile(user.id, {
+        lastSeen: Date.now(),
+      });
+      console.log(
+        "🚀 Last Seen Updated To:",
+        new Date(user.lastSeen).toLocaleString()
+      );
+    }
+  }, 60000);
   return (
     <div className="max-h-screen bg-linear-65 from-sky-500 to-indigo-500">
       <header className="flex items-center justify-between h-[10vh] px-10 bg-gray-800">

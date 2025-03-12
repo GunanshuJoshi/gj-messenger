@@ -2,12 +2,19 @@ import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router";
 import { signup } from "../config/firebase";
 import UserContext from "../context/UserContext";
+import { useEffect } from "react";
 
 const SignUp = () => {
-  const { user, setUser } = useContext(UserContext);
+  const { user, getUserData } = useContext(UserContext);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && Object.keys(user).length !== 0) {
+      navigate("/");
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -21,7 +28,7 @@ const SignUp = () => {
       console.log("🚀 Signing up with:", form);
       const userData = await signup(form.username, form.email, form.password);
       console.log("🚀 ~ handleSubmit ~ userData:", userData);
-      setUser(user);
+      await getUserData(userData.uid);
       setForm({ username: "", email: "", password: "" });
     } catch (error) {
       console.error("Signup error:", error);

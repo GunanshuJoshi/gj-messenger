@@ -4,6 +4,8 @@ import UserContext from "../context/UserContext";
 import { updateProfile } from "../config/firebase";
 import { IKContext, IKUpload } from "imagekitio-react";
 
+const urlEndpoint = import.meta.env.VITE_IMAGE_KIT_API_ENDPOINT;
+const publicKey = import.meta.env.VITE_IMAGE_KIT_KEY;
 // Fixed authenticator function
 const authenticator = async () => {
   try {
@@ -24,20 +26,17 @@ const authenticator = async () => {
 };
 
 const Profile = () => {
-  const { user, setUser } = useContext(UserContext);
+  const { user, getUserData } = useContext(UserContext);
   const [image, setImg] = useState({
     isLoading: false,
     error: null,
-    db: null,
+    dp: user?.dp || "/profile.png",
   });
-  const [previewImage, setPreviewImage] = useState("/profile.png");
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!user || Object.keys(user).length === 0) navigate("/signin");
-    if (user && user.dp) {
-      setPreviewImage(user.dp);
-    }
+    if (user?.dp) setImg((prev) => ({ ...prev, dp: user.dp }));
   }, [user, navigate]);
 
   const onError = (err) => {
@@ -47,44 +46,69 @@ const Profile = () => {
 
   const onSuccess = (res) => {
     console.log("Success", res);
-    setImg((prev) => ({ ...prev, isLoading: false, db: res }));
-    if (res && res.url) {
-      setPreviewImage(res.url);
+    if (res?.url) {
+      setImg((prev) => ({ ...prev, dp: res.url, isLoading: false })); // Update only the URL
     }
   };
 
   const onUploadStart = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      console.log("📂 Selected file size:", file.size, "bytes"); // Debugging file size
+      console.log("📂 Selected file size:", file.size, "bytes");
+
+      setImg((prev) => ({ ...prev, isLoading: true })); // Set loading state
+
       const fileReader = new FileReader();
       fileReader.onloadend = () => {
-        console.log("Start", e);
-        setImg((prev) => ({
-          ...prev,
-          isLoading: true,
-        }));
-        setPreviewImage(URL.createObjectURL(file));
+        setImg((prev) => ({ ...prev, dp: URL.createObjectURL(file) })); // Show local preview
       };
       fileReader.readAsDataURL(file);
+
+      uploadImageToImageKit(file);
+    }
+  };
+
+  const uploadImageToImageKit = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("fileName", `profile_picture_${user.id}_${Date.now()}`);
+
+      const response = await fetch(
+        "https://upload.imagekit.io/api/v1/files/upload",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${btoa("your_public_key:your_private_key")}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+      if (data.url) {
+        setImg((prev) => ({ ...prev, dp: data.url, isLoading: false })); // Update only URL
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      setImg((prev) => ({ ...prev, isLoading: false, error: error.message }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData(e.target);
+
     const postData = {
       username: data.get("username").toLowerCase() || user.username,
-      dp: image.db?.url || previewImage || user.dp,
+      dp: image.dp || "/profile.png", // Use uploaded URL
       bio: data.get("bio") || user.bio,
     };
-
     try {
       await updateProfile(user.id, postData);
-      alert("Profile updated successfully!");
+      await getUserData(user.id);
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("Failed to update profile. Please try again.");
     }
   };
 
@@ -99,7 +123,7 @@ const Profile = () => {
             <div className="flex-shrink-0">
               <img
                 className="h-24 w-24 rounded-full object-cover"
-                src={previewImage || user?.dp || "/profile.png"}
+                src={image.dp}
                 alt="Profile"
               />
             </div>
@@ -109,12 +133,12 @@ const Profile = () => {
               </label>
               <div className="mt-1">
                 <IKContext
-                  publicKey={import.meta.env.VITE_IMAGE_KIT_KEY}
-                  urlEndpoint={import.meta.env.VITE_IMAGE_KIT_API_ENDPOINT}
+                  urlEndpoint={urlEndpoint}
+                  publicKey={publicKey}
                   authenticator={authenticator}
                 >
                   <IKUpload
-                    fileName="profile-upload.png"
+                    fileName={`profile_picture_${user.id}_${Date.now()}`}
                     onError={onError}
                     onSuccess={onSuccess}
                     useUniqueFileName={true}
@@ -122,11 +146,7 @@ const Profile = () => {
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                   />
                 </IKContext>
-                {image.isLoading && (
-                  <span className="mt-2 text-sm text-gray-500">
-                    Uploading...
-                  </span>
-                )}
+
                 {image.error && (
                   <span className="mt-2 text-sm text-red-500">
                     {image.error}

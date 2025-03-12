@@ -29,9 +29,6 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 export const signup = async (username, email, password) => {
-  console.log("🚀 ~ signup ~ password:", password);
-  console.log("🚀 ~ signup ~ email:", email);
-  console.log("🚀 ~ signup ~ username:", username);
   try {
     const data = await createUserWithEmailAndPassword(auth, email, password);
     const user = data.user;
@@ -48,8 +45,9 @@ export const signup = async (username, email, password) => {
     });
     return user;
   } catch (error) {
-    console.log("🚀 ~ signup ~ error:", error);
+    console.log("Error in signUp", error);
     toast.error(error.message);
+    return "";
   }
 };
 
@@ -58,16 +56,11 @@ export const signin = async (email, password) => {
     const data = await signInWithEmailAndPassword(auth, email, password);
     console.log("🚀 ~ signin ~ data:", data);
     const user = data.user;
-    const res = await getDoc(doc(db, "users", user.uid));
-    const userData = res.data();
-    console.log("🚀 ~ signin ~ userData:", userData);
-    const res2 = await getDoc(doc(db, "chats", user.uid));
-    const chatData = res2.data();
-    console.log("🚀 ~ signin ~ chatData:", chatData);
-    return { userData, chatData };
+    return user;
   } catch (error) {
-    console.log("🚀 ~ signin ~ error:", error);
+    console.log("Error in signUp", error);
     toast.error(error.message);
+    return "";
   }
 };
 
@@ -75,10 +68,9 @@ export const updateProfile = async (userId, data) => {
   console.log("🚀 ~ updateProfile ~ userId:", userId);
   if (!userId) return;
   try {
-    const res = await updateDoc(doc(db, "users", userId), data);
-    console.log("🚀 ~ updateProfile ~ res:", res);
+    await updateDoc(doc(db, "users", userId), data);
   } catch (error) {
-    console.log("🚀 ~ signin ~ error:", error);
+    console.log("Error in Update Profile: ", error);
     toast.error(error.message);
   }
 };

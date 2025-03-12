@@ -5,7 +5,8 @@ import { auth, signin } from "../config/firebase";
 import UserContext from "../context/UserContext";
 
 const SignIn = () => {
-  const { user, setUser, chats, setChats } = useContext(UserContext);
+  const { user, getUserData, getChatData, updateProfile } =
+    useContext(UserContext);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
@@ -14,19 +15,20 @@ const SignIn = () => {
     const data = new FormData(e.target);
     const email = data.get("email");
     const password = data.get("password");
-    const { userData, chatData } = await signin(email, password);
-    console.log("🚀 ~ handleSubmit ~ userData:", userData);
-    console.log("🚀 ~ handleSubmit ~ chatData:", chatData);
-    setUser(userData);
-    setChats(chatData);
+    const user = await signin(email, password);
+    await updateProfile(user.uid, {
+      lastSeen: Date.now(),
+    });
+    await getChatData(user.uid);
     setLoading(false);
   };
   useEffect(() => {
-    console.log("Updated user:", user);
     if (user && Object.keys(user).length > 0) {
       navigate("/");
     }
   }, [user]);
+
+  
 
   return (
     <div className="bg-[url(/bg2.jpg)] font-lato w-full h-screen flex flex-col justify-center items-center text-stone-300 p-5">

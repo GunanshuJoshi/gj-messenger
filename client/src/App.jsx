@@ -1,13 +1,15 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import ChatList from "./components/ChatList";
 import ChatMessage from "./components/ChatMessage";
 import Profile from "./components/Profile";
 import UserContext from "./context/UserContext";
+import { throttle } from "lodash";
 import { useNavigate } from "react-router";
+import { getOnlineUsers, updateLastSeen } from "./config/firebase";
 const App = () => {
+  const [secondUser, setSecondUser] = useState("");
   const navigate = useNavigate();
-  const { user, getUserData, chats, getChatData, updateProfile } =
-    useContext(UserContext);
+  const { user, getUserData, getChatData } = useContext(UserContext);
 
   useEffect(() => {
     console.log("user is", user);
@@ -19,18 +21,16 @@ const App = () => {
     await getChatData();
   };
 
-  setInterval(async () => {
-    if (user.id) {
-      console.log("Updating...");
-      await updateProfile(user.id, {
-        lastSeen: Date.now(),
-      });
-      console.log(
-        "🚀 Last Seen Updated To:",
-        new Date(user.lastSeen).toLocaleString()
-      );
+  const updateUserLastSeen = throttle(async () => {
+    if (user?.id) {
+      updateLastSeen(user.id);
     }
+    getOnlineUsers(user.id);
   }, 60000);
+
+  document.addEventListener("mousemove", updateUserLastSeen);
+  document.addEventListener("keydown", updateUserLastSeen);
+
   return (
     <div className="max-h-screen bg-linear-65 from-sky-500 to-indigo-500">
       <header className="flex items-center justify-between h-[10vh] px-10 bg-gray-800">
@@ -58,8 +58,8 @@ const App = () => {
       </header>
 
       <main className="grid grid-cols-[1fr_2fr] border-2 h-[90vh] ">
-        <ChatList />
-        <ChatMessage />
+        <ChatList setSecondUser={setSecondUser} />
+        <ChatMessage secondUser={secondUser} />
       </main>
     </div>
   );

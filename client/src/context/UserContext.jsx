@@ -22,14 +22,18 @@ export const UserProvider = ({ children }) => {
     }
   };
   const getChatData = async (id) => {
+    console.log("🚀 ~ getChatData ~ id:", id);
     if (!id) {
       setChats([]);
       return;
     }
     try {
       const res = await getDoc(doc(db, "chats", id));
+      console.log("🚀 ~ getChatData ~ res:", res);
       const chatData = res.data();
-      setChats(chatData);
+      console.log("🚀 ~ getChatData ~ chatData:", chatData);
+      if (!chatData.chatData) throw new Error("Chat Data is undefined!!!");
+      setChats(chatData.chatData);
     } catch (error) {
       console.log("Error fetching chat Data ", error);
     }

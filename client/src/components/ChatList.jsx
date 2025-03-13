@@ -1,102 +1,106 @@
-import React, { useEffect, useState } from "react";
+import {
+  addDoc,
+  arrayUnion,
+  collection,
+  doc,
+  endAt,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  startAt,
+  updateDoc,
+} from "firebase/firestore";
+import React, { useContext, useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
-const ChatList = () => {
-  const data = [
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage: "How are you? I am good?",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage:
-        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Reiciendis nulla veritatis praesentium perferendis delectus at maxime dolorem tempore, odit doloremque voluptatem pariatur voluptate temporibus libero numquam saepe eum vel ea.",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage: "How are you? I am good?",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage:
-        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Reiciendis nulla veritatis praesentium perferendis delectus at maxime dolorem tempore, odit doloremque voluptatem pariatur voluptate temporibus libero numquam saepe eum vel ea.",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage: "How are you? I am good?",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage:
-        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Reiciendis nulla veritatis praesentium perferendis delectus at maxime dolorem tempore, odit doloremque voluptatem pariatur voluptate temporibus libero numquam saepe eum vel ea.",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage: "How are you? I am good?",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage:
-        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Reiciendis nulla veritatis praesentium perferendis delectus at maxime dolorem tempore, odit doloremque voluptatem pariatur voluptate temporibus libero numquam saepe eum vel ea.",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage: "How are you? I am good?",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage:
-        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Reiciendis nulla veritatis praesentium perferendis delectus at maxime dolorem tempore, odit doloremque voluptatem pariatur voluptate temporibus libero numquam saepe eum vel ea.",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage: "How are you? I am good?",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage:
-        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Reiciendis nulla veritatis praesentium perferendis delectus at maxime dolorem tempore, odit doloremque voluptatem pariatur voluptate temporibus libero numquam saepe eum vel ea.",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage: "How are you? I am good?",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage:
-        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Reiciendis nulla veritatis praesentium perferendis delectus at maxime dolorem tempore, odit doloremque voluptatem pariatur voluptate temporibus libero numquam saepe eum vel ea.",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage: "How are you? I am good?",
-    },
-    {
-      profile: "/profile.png",
-      name: "Gunanshu",
-      lastMessage:
-        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Reiciendis nulla veritatis praesentium perferendis delectus at maxime dolorem tempore, odit doloremque voluptatem pariatur voluptate temporibus libero numquam saepe eum vel ea.",
-    },
-  ];
+import { db } from "../config/firebase";
+import UserContext from "../context/UserContext";
+const ChatList = ({ setSecondUser }) => {
+  const { user, chats, getChatData } = useContext(UserContext);
+  const [data, setData] = useState([]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 3000);
+  const fetchAllUsers = async () => {
+    try {
+      const res = await getDocs(collection(db, "users"));
+      const allUserData = res.docs.map((doc) => doc.data());
+      setData(allUserData);
+    } catch (error) {
+      console.log("Error while fetching users: ", error);
+    }
+  };
+  useEffect(() => {
+    fetchAllUsers();
+  }, []);
 
   useEffect(() => {
-    console.log(debouncedSearchTerm);
+    fetchSearch(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
+
+  const fetchSearch = async (input) => {
+    if (!input) return;
+    console.log("🚀 ~ fetchSearch ~ input:", input);
+    const userRef = collection(db, "users");
+    const q = query(
+      userRef,
+      orderBy("username"),
+      startAt(debouncedSearchTerm.toLowerCase()),
+      endAt(debouncedSearchTerm.toLowerCase() + "\uf8ff")
+    );
+
+    const res = await getDocs(q);
+    console.log("🚀 ~ useEffect ~ res:", res);
+    const matchedUsers = res.docs.map((doc) => doc.data());
+    console.log("🚀 ~ fetchSearch ~ matchedUsers:", matchedUsers);
+    setData(matchedUsers);
+  };
+  const addNewChat = async (secondUser) => {
+    const chatWithSecondUser = chats.filter((i) => {
+      console.log(i.secondUserId, " ", user.id);
+      return i?.secondUserId === secondUser.id;
+    });
+    console.log("🚀 ~ addNewChat ~ chatWithSecondUser:", chatWithSecondUser);
+    setSecondUser(secondUser);
+
+    if (chatWithSecondUser.length > 0) {
+      console.log("✅ Chat already exists:", chatWithSecondUser[0]);
+      return chatWithSecondUser[0]; // Return existing chat
+    }
+    try {
+      const messageRef = await addDoc(collection(db, "messages"), {
+        createdAt: serverTimestamp(),
+        messages: [],
+      });
+
+      console.log("🚀 ~ addNewChat ~ messageRef:", messageRef);
+      const chatRef = collection(db, "chats");
+      console.log("🚀 ~ addNewChat ~ chatRef:", chatRef);
+      await updateDoc(doc(chatRef, secondUser.id), {
+        chatData: arrayUnion({
+          messageId: messageRef.id,
+          lastMessage: "",
+          secondUserId: user.id,
+          updatedAt: Date.now(),
+          messageSeen: false,
+        }),
+      });
+      await updateDoc(doc(chatRef, user.id), {
+        chatData: arrayUnion({
+          messageId: messageRef.id,
+          lastMessage: "",
+          secondUserId: secondUser.id,
+          updatedAt: Date.now(),
+          messageSeen: false,
+        }),
+      });
+      await getChatData(user.id);
+      console.log("done");
+    } catch (error) {
+      console.log("🚀 ~ addNewChat ~ error:", error);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col items-center w-full bg-black/20  ">
@@ -109,34 +113,45 @@ const ChatList = () => {
         <input
           type="text"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+          }}
           placeholder="Search"
-          className="w-full p-1 focus:outline-none focus:ring-0 placeholder:text-amber-50 text-white"
+          className="w-full p-1 focus:outline-none text-leftfocus:ring-0 placeholder:text-amber-50 text-white"
         />
         {searchTerm !== "" && (
           <img
             src="/close.png"
             className="h-10 p-2 cursor-pointer"
-            onClick={() => setSearchTerm("")}
+            onClick={() => {
+              setSearchTerm("");
+              fetchAllUsers();
+            }}
           />
         )}
       </div>
       <div className="h-[80vh] overflow-auto  w-[90%] flex flex-col gap-3 mt-5">
-        {data.map((i, index) => (
-          <div className="flex flex-row w-full min-w-0 hover:bg-[#205496] hover:text-white">
-            <img
-              src={i?.profile || "/profile.png"}
-              alt="Profile pic"
-              className="h-12"
-            />
-            <div className="flex flex-col w-full min-w-0">
-              <span className="text-lg font-bold">{i.name}</span>
-              <span className="max-w-[300px] truncate overflow-hidden whitespace-nowrap block">
-                {i.lastMessage}
-              </span>
+        {data
+          .filter((i) => i.id !== user.id)
+          .map((i) => (
+            <div
+              key={i.id}
+              className="flex flex-row w-full hover:bg-[#205496] hover:text-white"
+              onClick={() => addNewChat(i)}
+            >
+              <img
+                src={i?.dp || "/profile.png"}
+                alt="Profile pic"
+                className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+              />
+              <div className="flex flex-col w-full ml-2">
+                <span className="text-lg font-bold">{i.username}</span>
+                <span className="max-w-[300px] truncate overflow-hidden whitespace-nowrap block">
+                  {i.lastMessage}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );

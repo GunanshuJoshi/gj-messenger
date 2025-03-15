@@ -7,7 +7,7 @@ import {
 import { doc, getFirestore, setDoc, updateDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
 const firebaseConfig = {
-  apiKey: "AIzaSyCYkn9zCEbLpAs5Tu65JZfqyjm2MYRJDDA",
+  apiKey: import.meta.env.VITE_FIREBASE_API,
   authDomain: "gj-messenger.firebaseapp.com",
   projectId: "gj-messenger",
   storageBucket: "gj-messenger.firebasestorage.app",

@@ -4,3 +4,11 @@
 @theme {
   --font-lato: "Lato", sans-serif;
 }
+
+.secondUserMessage {
+  @apply flex w-[70%] mx-5 items-end space-x-3;
+}
+
+.currentUserMessage {
+  @apply flex w-[70%] ml-auto mx-5 items-end space-x-3 flex-row-reverse;
+}

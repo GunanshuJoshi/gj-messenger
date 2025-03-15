@@ -9,7 +9,7 @@ const publicKey = import.meta.env.VITE_IMAGE_KIT_KEY;
 // Fixed authenticator function
 const authenticator = async () => {
   try {
-    const response = await fetch("http://localhost:3000/auth");
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth`);
     if (!response.ok) throw new Error(`Auth failed: ${response.statusText}`);
     const data = await response.json();
 

@@ -16,8 +16,9 @@ import React, { useContext, useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { db } from "../config/firebase";
 import UserContext from "../context/UserContext";
-const ChatList = ({ setSecondUser }) => {
-  const { user, chats, getChatData } = useContext(UserContext);
+const ChatList = () => {
+  const { user, chats, getChatData, setChatUser, setMessageId } =
+    useContext(UserContext);
   const [data, setData] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,8 +26,21 @@ const ChatList = ({ setSecondUser }) => {
   const fetchAllUsers = async () => {
     try {
       const res = await getDocs(collection(db, "users"));
-      const allUserData = res.docs.map((doc) => doc.data());
+      console.log("🚀 ~ fetchAllUsers ~ res:", res);
+      let allUserData = res.docs.map((doc) => doc.data());
+      allUserData = allUserData.map((i) => {
+        const chatWithUser = chats.find((chat) => chat.secondUserId === i.id);
+
+        if (chatWithUser) {
+          i.lastMessage = chatWithUser.lastMessage;
+        }
+
+        return i;
+      });
+      console.log("🚀 ~ fetchAllUsers ~ allUserData:", allUserData);
       setData(allUserData);
+
+      console.log(chats);
     } catch (error) {
       console.log("Error while fetching users: ", error);
     }
@@ -57,16 +71,17 @@ const ChatList = ({ setSecondUser }) => {
     setData(matchedUsers);
   };
   const addNewChat = async (secondUser) => {
+    setChatUser(secondUser);
     const chatWithSecondUser = chats.filter((i) => {
       console.log(i.secondUserId, " ", user.id);
       return i?.secondUserId === secondUser.id;
     });
     console.log("🚀 ~ addNewChat ~ chatWithSecondUser:", chatWithSecondUser);
-    setSecondUser(secondUser);
 
     if (chatWithSecondUser.length > 0) {
       console.log("✅ Chat already exists:", chatWithSecondUser[0]);
-      return chatWithSecondUser[0]; // Return existing chat
+      setMessageId(chatWithSecondUser[0].messageId);
+      return;
     }
     try {
       const messageRef = await addDoc(collection(db, "messages"), {
@@ -136,7 +151,7 @@ const ChatList = ({ setSecondUser }) => {
           .map((i) => (
             <div
               key={i.id}
-              className="flex flex-row w-full hover:bg-[#205496] hover:text-white"
+              className="flex flex-row w-full rounded-3xl hover:bg-[#205496] hover:text-white"
               onClick={() => addNewChat(i)}
             >
               <img

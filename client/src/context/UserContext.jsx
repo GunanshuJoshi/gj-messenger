@@ -5,8 +5,11 @@ import { db } from "../config/firebase";
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState({});
-  const [chats, setChats] = useState([]);
+  const [user, setUser] = useState(null);
+  const [chats, setChats] = useState(null);
+  const [messagesData, setMessagesData] = useState(null);
+  const [messageId, setMessageId] = useState(null);
+  const [chatUser, setChatUser] = useState(null);
 
   const getUserData = async (id) => {
     if (!id) {
@@ -54,6 +57,12 @@ export const UserProvider = ({ children }) => {
     chats,
     getUserData,
     updateProfile,
+    chatUser,
+    setChatUser,
+    setMessageId,
+    messageId,
+    messagesData,
+    setMessagesData,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

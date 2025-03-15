@@ -1,32 +1,58 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import ImageKit from "imagekit";
-
-dotenv.config(); // Load environment variables
+// Backend: server.js
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
+const { db } = require("./firebaseConfig"); // Assuming you use Firestore
+const {
+  collection,
+  addDoc,
+  updateDoc,
+  arrayUnion,
+  doc,
+  getDoc,
+} = require("firebase/firestore");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 app.use(cors());
-app.use(express.json());
-
-const imagekit = new ImageKit({
-  urlEndpoint: process.env.IMAGE_KIT_API_ENDPOINT,
-  publicKey: process.env.IMAGE_KIT_PUBLIC_KEY,
-  privateKey: process.env.IMAGE_KIT_PRIVATE_KEY,
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*" },
 });
-export const uploadFile = async (req, res, next) => {
-  try {
-    const result = imagekit.getAuthenticationParameters();
-    res.status(200).send(result);
-  } catch (error) {
-    next(
-      new AppError("Error generating upload authentication parameters", 500)
-    );
-  }
-};
-app.get("/auth", uploadFile);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const users = {}; // Store connected users
+
+io.on("connection", (socket) => {
+  console.log("A user connected", socket.id);
+
+  socket.on("join", (userId) => {
+    users[userId] = socket.id;
+    io.emit("userStatus", users);
+  });
+
+  socket.on(
+    "sendMessage",
+    async ({ senderId, receiverId, text, messageId }) => {
+      const messageData = { senderId, text, createdAt: new Date() };
+      await updateDoc(doc(db, "messages", messageId), {
+        messages: arrayUnion(messageData),
+      });
+
+      if (users[receiverId]) {
+        io.to(users[receiverId]).emit("receiveMessage", messageData);
+      }
+    }
+  );
+
+  socket.on("disconnect", () => {
+    for (const userId in users) {
+      if (users[userId] === socket.id) {
+        delete users[userId];
+        break;
+      }
+    }
+    io.emit("userStatus", users);
+  });
 });
+
+server.listen(5000, () => console.log("Server running on port 5000"));

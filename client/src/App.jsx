@@ -7,7 +7,6 @@ import { throttle } from "lodash";
 import { useNavigate } from "react-router";
 import { getOnlineUsers, updateLastSeen } from "./config/firebase";
 const App = () => {
-  const [secondUser, setSecondUser] = useState("");
   const navigate = useNavigate();
   const { user, getUserData, getChatData } = useContext(UserContext);
 
@@ -21,15 +20,14 @@ const App = () => {
     await getChatData();
   };
 
-  const updateUserLastSeen = throttle(async () => {
-    if (user?.id) {
-      updateLastSeen(user.id);
-    }
-    getOnlineUsers(user.id);
-  }, 60000);
+  // const updateUserLastSeen = throttle(async () => {
+  //   if (user?.id) {
+  //     updateLastSeen(user.id);
+  //   }
+  // }, 60000);
 
-  document.addEventListener("mousemove", updateUserLastSeen);
-  document.addEventListener("keydown", updateUserLastSeen);
+  // document.addEventListener("mousemove", updateUserLastSeen);
+  // document.addEventListener("keydown", updateUserLastSeen);
 
   return (
     <div className="max-h-screen bg-linear-65 from-sky-500 to-indigo-500">
@@ -58,8 +56,8 @@ const App = () => {
       </header>
 
       <main className="grid grid-cols-[1fr_2fr] border-2 h-[90vh] ">
-        <ChatList setSecondUser={setSecondUser} />
-        <ChatMessage secondUser={secondUser} />
+        <ChatList />
+        <ChatMessage />
       </main>
     </div>
   );

@@ -6,12 +6,16 @@ import { IKContext, IKUpload } from "imagekitio-react";
 
 const urlEndpoint = import.meta.env.VITE_IMAGE_KIT_API_ENDPOINT;
 const publicKey = import.meta.env.VITE_IMAGE_KIT_KEY;
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 // Fixed authenticator function
 const authenticator = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth`);
+    console.log("🚀 ~ backendUrl:", `${backendUrl}/auth`);
+
+    const response = await fetch(`${backendUrl}/auth`);
     if (!response.ok) throw new Error(`Auth failed: ${response.statusText}`);
     const data = await response.json();
+    console.log("🚀 ~ authenticator ~ data:", data);
 
     // Make sure property names match exactly what ImageKit expects
     return {
@@ -39,6 +43,10 @@ const Profile = () => {
     if (user?.dp) setImg((prev) => ({ ...prev, dp: user.dp }));
   }, [user, navigate]);
 
+  const onUploadStart = () => {
+    setImg((prev) => ({ ...prev, isLoading: true }));
+  };
+
   const onError = (err) => {
     console.log("Error", err);
     setImg((prev) => ({ ...prev, isLoading: false, error: err?.message }));
@@ -47,53 +55,13 @@ const Profile = () => {
   const onSuccess = (res) => {
     console.log("Success", res);
     if (res?.url) {
-      setImg((prev) => ({ ...prev, dp: res.url, isLoading: false })); // Update only the URL
+      setImg((prev) => ({ ...prev, dp: res.url, isLoading: false }));
     }
   };
 
-  const onUploadStart = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      console.log("📂 Selected file size:", file.size, "bytes");
-
-      setImg((prev) => ({ ...prev, isLoading: true })); // Set loading state
-
-      const fileReader = new FileReader();
-      fileReader.onloadend = () => {
-        setImg((prev) => ({ ...prev, dp: URL.createObjectURL(file) })); // Show local preview
-      };
-      fileReader.readAsDataURL(file);
-
-      uploadImageToImageKit(file);
-    }
-  };
-
-  const uploadImageToImageKit = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("fileName", `profile_picture_${user.id}_${Date.now()}`);
-
-      const response = await fetch(
-        "https://upload.imagekit.io/api/v1/files/upload",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Basic ${btoa("your_public_key:your_private_key")}`,
-          },
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-      if (data.url) {
-        setImg((prev) => ({ ...prev, dp: data.url, isLoading: false })); // Update only URL
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      setImg((prev) => ({ ...prev, isLoading: false, error: error.message }));
-    }
-  };
+  useEffect(() => {
+    console.log("🚀 ~ Profile ~ image:", image);
+  }, [image]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,7 +69,7 @@ const Profile = () => {
 
     const postData = {
       username: data.get("username").toLowerCase() || user.username,
-      dp: image.dp || "/profile.png", // Use uploaded URL
+      dp: image.dp || "/profile.png",
       bio: data.get("bio") || user.bio,
     };
     try {
@@ -111,6 +79,10 @@ const Profile = () => {
       console.error("Error updating profile:", error);
     }
   };
+
+  useEffect(() => {
+    console.log("image.dp is", image.dp);
+  }, [image]);
 
   return (
     <div className="h-screen bg-gradient-to-br from-indigo-100 to-purple-100 flex flex-col justify-center items-center p-6">
@@ -123,7 +95,7 @@ const Profile = () => {
             <div className="flex-shrink-0">
               <img
                 className="h-24 w-24 rounded-full object-cover"
-                src={image.dp}
+                src={image?.dp || "/profile.png"}
                 alt="Profile"
               />
             </div>

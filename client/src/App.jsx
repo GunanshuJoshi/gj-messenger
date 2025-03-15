@@ -20,14 +20,6 @@ const App = () => {
     await getChatData();
   };
 
-  // const updateUserLastSeen = throttle(async () => {
-  //   if (user?.id) {
-  //     updateLastSeen(user.id);
-  //   }
-  // }, 60000);
-
-  // document.addEventListener("mousemove", updateUserLastSeen);
-  // document.addEventListener("keydown", updateUserLastSeen);
 
   return (
     <div className="max-h-screen bg-linear-65 from-sky-500 to-indigo-500">

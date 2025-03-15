@@ -45,6 +45,7 @@ const ChatList = () => {
       console.log("Error while fetching users: ", error);
     }
   };
+  
   useEffect(() => {
     fetchAllUsers();
   }, []);

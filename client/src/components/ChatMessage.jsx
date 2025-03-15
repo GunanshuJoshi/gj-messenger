@@ -12,47 +12,60 @@ const ChatMessage = () => {
   const [input, setInput] = useState("");
   const [active, setActive] = useState(true);
 
-  const sendMessage = async () => {
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || !messageId) return; // Prevent empty messages
+
     try {
-      if (input && messageId) {
-        await updateDoc(doc(db, "messages", messageId), {
-          messages: arrayUnion({
-            senderId: user.id,
-            text: input,
-            createdAt: new Date(),
-          }),
-        });
-        const userIDs = [user.id, chatUser.id];
-        userIDs.forEach(async (id) => {
+      const messageRef = doc(db, "messages", messageId);
+
+      await updateDoc(messageRef, {
+        messages: arrayUnion({
+          senderId: user.id,
+          text: input.trim(),
+          createdAt: new Date(),
+        }),
+      });
+
+      // Update last message in chat
+      const userIDs = [user.id, chatUser.id];
+
+      await Promise.all(
+        userIDs.map(async (id) => {
           const userChatRef = doc(db, "chats", id);
           const userChatDoc = await getDoc(userChatRef);
+
           if (userChatDoc.exists()) {
-            const userChatData = userChatDoc.data();
-            console.log("🚀 ~ userIDs.forEach ~ userChatData:", userChatData);
+            let userChatData = userChatDoc.data();
+
             const chatIndex = userChatData.chatData.findIndex(
               (c) => c.messageId === messageId
             );
-            userChatData.chatData[chatIndex].lastMessage = input.slice(0, 30);
-            userChatData.chatData[chatIndex].updatedAt = Date.now();
-            if (userChatData.chatData[chatIndex].secondUserId === chatUser.id) {
-              userChatData.chatData[chatIndex].messageSeen = false;
+
+            if (chatIndex !== -1) {
+              userChatData.chatData[chatIndex] = {
+                ...userChatData.chatData[chatIndex],
+                lastMessage: input.slice(0, 30),
+                updatedAt: Date.now(),
+                messageSeen: id === user.id, // Only mark seen for the sender
+              };
+
+              await updateDoc(userChatRef, { chatData: userChatData.chatData });
             }
-            await updateDoc(userChatRef, {
-              chatData: userChatData.chatData,
-            });
           }
-        });
-      }
+        })
+      );
     } catch (error) {
-      console.log("🚀 ~ sendMessage ~ error:", error);
+      console.error("Error sending message:", error);
     } finally {
-      setInput("");
+      setInput(() => "");
     }
   };
+
   return (
-    <div className=" flex flex-col justify-between items-center bg-transparent max-h-[90vh]">
+    <div className=" flex flex-col justify-between w-full items-center bg-transparent max-h-[90vh]">
       {chatUser ? (
-        <div className="bg-white">
+        <div className="bg-white w-full flex flex-col justify-center">
           <header className="flex flex-row h-[8vh] w-full items-center justify-between  bg-[#194478]">
             <div className="flex flex-row justify-center items-center">
               <img
@@ -81,27 +94,25 @@ const ChatMessage = () => {
           <div className="h-[72vh]">
             <Chat />
           </div>
-          <div className="flex justify-between w-[90%]  mb-3 bg-gray-200 rounded-4xl p-2 shadow-md">
-            <img
-              src="/link.png"
-              alt="Link"
-              className="h-10 w-12 cursor-pointer hover:opacity-80 transition-opacity"
-            />
-
+          <form
+            className="flex justify-between w-[80%] self-center mb-3 bg-gray-200 rounded-4xl p-2 shadow-md"
+            onSubmit={sendMessage}
+          >
             <input
               type="text"
               placeholder="Start Typing..."
+              value={input}
               onChange={(e) => setInput(e.target.value)}
               className="w-full bg-transparent px-5 text-gray-800 placeholder-gray-500 outline-none"
             />
-
-            <img
-              src="/dm.png"
-              alt="DM"
-              onClick={sendMessage}
-              className="h-10 w-12 cursor-pointer hover:opacity-80 transition-opacity"
-            />
-          </div>
+            <button type="submit">
+              <img
+                src="/dm.png"
+                alt="DM"
+                className="h-10 w-12 cursor-pointer hover:opacity-80 transition-opacity"
+              />
+            </button>
+          </form>
         </div>
       ) : (
         <div className="w-full h-full flex justify-center bg-transparent items-center">
